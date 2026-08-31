@@ -65,7 +65,15 @@ async function initFirebase() {
         flushQueue();
       }
     });
-    await signInAnonymously(state.auth);
+    await signInAnonymously(state.auth).catch((err) => {
+      console.warn("Jot: anonymous sign-in failed — enable it in Firebase Console → Authentication → Sign-in method.", err);
+      setStatus(false, "Sign-in not enabled");
+    });
+
+    // Belt-and-braces retry: the 'online' browser event can be missed (e.g. a flaky
+    // connection that never fires it, or Firestore's own token needing a refresh),
+    // so also sweep the queue on an interval.
+    setInterval(() => { if (state.online) flushQueue(); }, 20000);
   } catch (err) {
     console.warn("Jot: Firebase init failed, staying local-only.", err);
     setStatus(false, "Local only");
@@ -87,6 +95,7 @@ function subscribeRemote() {
         state.items = state.items.filter((i) => i.id !== remote.id);
         return;
       }
+      remote.syncStatus = "synced"; // remote docs never carry local bookkeeping fields
       const idx = state.items.findIndex((i) => i.id === remote.id);
       if (idx === -1) {
         state.items.push(remote);
@@ -113,7 +122,11 @@ async function flushQueue() {
   for (const op of state.queue) {
     try {
       if (op.type === "upsert") {
-        await setDoc(doc(itemsCollectionRef(), op.id), op.data);
+        // Strip local-only bookkeeping fields before writing — syncStatus must
+        // never be persisted to Firestore, or it comes back on the next snapshot
+        // and the item looks permanently "pending" even though it's synced.
+        const { syncStatus, ...remoteData } = op.data;
+        await setDoc(doc(itemsCollectionRef(), op.id), remoteData);
         const it = state.items.find((i) => i.id === op.id);
         if (it) it.syncStatus = "synced";
       } else if (op.type === "delete") {

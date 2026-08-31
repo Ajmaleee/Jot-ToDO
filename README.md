@@ -2,6 +2,13 @@
 
 A pocket notebook PWA for the ideas, tasks and reminders you'd otherwise forget. Leather-and-brass, offline-first, syncs to your own Firestore.
 
+## Fixing the installed app / redesign — what changed
+
+- **"Site might be temporarily down" when opened as an installed app** was a service worker bug: the old fetch handler could resolve with nothing (`undefined`) instead of a real response when a page wasn't cached yet, and browsers show that generic error screen when that happens. `sw.js` now always falls back to a cached copy of the app, so it never resolves empty.
+- **Because the fix lives inside the service worker itself, your phone needs to actually download the new one once.** After you redeploy: open the site in a normal browser tab (not the installed app) on the phone, let it load fully, then close it, and reopen the installed app. If it's still stuck, uninstall the home-screen app and reinstall it once — that guarantees the old broken worker is gone.
+- **Firestore sync bug**: writes were saving a local bookkeeping field (`syncStatus`) into your actual Firestore documents, so items could come back from the cloud looking permanently "pending" even after they'd synced. Fixed — that field now stays local-only. Sync also now retries automatically every 20 seconds in the background, not just when the browser fires an "online" event (which some networks never trigger cleanly).
+- **Redesign**: moved from the leather/paper look to **claymorphism + Material** — soft puffy "clay" surfaces (a light rim shadow + a soft dark shadow on opposite corners) built on Material's structure: a colored top app bar, filter chips, a Material-style FAB, elevated cards, and bottom sheets.
+
 ## 1. Connect it to your Firebase project
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project** (free Spark plan is enough).
