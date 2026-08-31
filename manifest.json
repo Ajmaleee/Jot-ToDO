@@ -1,0 +1,33 @@
+{
+  "name": "Jot — Ajmal's Idea Vault",
+  "short_name": "Jot",
+  "description": "A pocket notebook for ideas, tasks and things you'd otherwise forget. By Ajmal Ali A.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#2E2118",
+  "theme_color": "#3D2D21",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "New idea",
+      "short_name": "New idea",
+      "description": "Jot a new idea straight away",
+      "url": "./index.html?new=idea",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "New task",
+      "short_name": "New task",
+      "description": "Add a task to your list",
+      "url": "./index.html?new=task",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

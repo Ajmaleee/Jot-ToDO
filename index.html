@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Jot — Ajmal's Idea Vault</title>
+<meta name="description" content="A pocket notebook for ideas, tasks and things you'd otherwise forget." />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#3D2D21" />
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Jot" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Kalam:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Leather header -->
+  <header class="spine">
+    <div class="spine-row">
+      <div class="brand">
+        <div class="brand-badge">A</div>
+        <div>
+          <p class="brand-title">JOT</p>
+          <p class="brand-sub">Ajmal Ali A's idea vault</p>
+        </div>
+      </div>
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+    </div>
+
+    <div class="status-strip">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Synced</span>
+      <button id="syncNowBtn">Sync now</button>
+    </div>
+  </header>
+
+  <div id="installRibbon" class="install-ribbon" style="display:none;">
+    📌 Add Jot to your home screen for one-tap access
+    <button id="installBtn">Install</button>
+    <button class="dismiss" id="installDismiss">✕</button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search your notebook…" />
+    </div>
+  </div>
+
+  <!-- Category tabs -->
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-cat="all">All</button>
+    <button class="tab" data-cat="idea"><span class="dot"></span>Ideas</button>
+    <button class="tab" data-cat="task"><span class="dot"></span>Tasks</button>
+    <button class="tab" data-cat="note"><span class="dot"></span>Notes</button>
+    <button class="tab" data-cat="reminder"><span class="dot"></span>Reminders</button>
+  </nav>
+
+  <!-- Pinned -->
+  <div class="pinned-strip" id="pinnedStrip" style="display:none;">
+    <p class="pinned-label">📎 Pinned</p>
+    <div class="entries" id="pinnedEntries"></div>
+  </div>
+
+  <!-- Entries -->
+  <main class="entries" id="entries"></main>
+
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="stamp">PAGE BLANK</div>
+    <p>Tap the pen below to jot your first idea, task or note.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat"><b id="statTotal">0</b><span>Total</span></div>
+    <div class="stat"><b id="statOpen">0</b><span>Open tasks</span></div>
+    <div class="stat"><b id="statStreak">0</b><span>Day streak</span></div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fabAdd" aria-label="New entry">✎</button>
+
+  <!-- Composer sheet -->
+  <div class="sheet-backdrop" id="backdrop"></div>
+  <form class="sheet" id="composerSheet">
+    <div class="sheet-handle"></div>
+    <h2 id="composerTitle">New entry</h2>
+
+    <label class="field-label">What's on your mind?</label>
+    <input class="paper-input" id="entryTitle" placeholder="e.g. Build a PWA for random ideas…" required maxlength="140" />
+
+    <div class="mic-row">
+      <button type="button" class="mic-btn" id="micBtn" title="Voice input">🎙</button>
+      <span class="mic-hint" id="micHint">Tap to dictate instead of typing</span>
+    </div>
+
+    <label class="field-label">Details (optional)</label>
+    <textarea class="paper-textarea" id="entryDetail" placeholder="Add more context…" maxlength="600"></textarea>
+
+    <label class="field-label">Category</label>
+    <div class="cat-picker" id="catPicker">
+      <button type="button" class="cat-pick selected" data-cat="idea">💡 Idea</button>
+      <button type="button" class="cat-pick" data-cat="task">✅ Task</button>
+      <button type="button" class="cat-pick" data-cat="note">📝 Note</button>
+      <button type="button" class="cat-pick" data-cat="reminder">⏰ Reminder</button>
+    </div>
+
+    <div class="row-2" style="margin-top:14px;">
+      <div>
+        <label class="field-label">Due date</label>
+        <input class="paper-input" type="date" id="entryDate" />
+      </div>
+      <div>
+        <label class="field-label">Time</label>
+        <input class="paper-input" type="time" id="entryTime" />
+      </div>
+    </div>
+
+    <label class="field-label">Tags</label>
+    <input class="paper-input" id="entryTags" placeholder="comma, separated, tags" />
+
+    <div class="pin-toggle">
+      <div class="switch" id="pinSwitch"><div class="knob"></div></div>
+      <span>Pin to top with a paperclip</span>
+    </div>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="saveBtn">Save to notebook</button>
+    </div>
+  </form>
+
+  <!-- Settings sheet -->
+  <div class="sheet-backdrop" id="settingsBackdrop"></div>
+  <div class="sheet" id="settingsSheet">
+    <div class="sheet-handle"></div>
+    <h2>Settings</h2>
+
+    <div class="settings-row">
+      <div>
+        <div>Night cover</div>
+        <div class="settings-meta">Dark leather theme</div>
+      </div>
+      <div class="switch" id="darkSwitch"><div class="knob"></div></div>
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div>Reminder notifications</div>
+        <div class="settings-meta">Alerts while Jot is open</div>
+      </div>
+      <div class="switch" id="notifSwitch"><div class="knob"></div></div>
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div>Show archived / done</div>
+        <div class="settings-meta">Include completed items in lists</div>
+      </div>
+      <div class="switch" id="archiveSwitch"><div class="knob"></div></div>
+    </div>
+
+    <div class="settings-row" style="border-bottom:none; flex-direction:column; align-items:stretch; gap:8px; padding-top:16px;">
+      <div class="settings-meta">Your data</div>
+      <div class="sheet-actions" style="margin-top:0;">
+        <button class="btn btn-ghost" id="exportBtn" type="button">Export JSON</button>
+        <button class="btn btn-ghost" id="clearDoneBtn" type="button">Clear done</button>
+      </div>
+    </div>
+
+    <div class="settings-row" style="border-bottom:none; flex-direction:column; align-items:flex-start; gap:6px; padding-top:16px;">
+      <div class="settings-meta">Made by Ajmal Ali A</div>
+      <a class="link-row" href="https://github.com/ajmaleee" target="_blank" rel="noopener">↗ github.com/ajmaleee</a>
+      <a class="link-row" href="https://www.instagram.com/ajmaleee__/" target="_blank" rel="noopener">↗ @ajmaleee__ on Instagram</a>
+    </div>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn btn-primary" id="closeSettingsBtn">Close</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <span id="toastMsg"></span>
+    <button id="toastUndo" style="display:none;">Undo</button>
+  </div>
+
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
