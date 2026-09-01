@@ -2,6 +2,15 @@
 
 A pocket notebook PWA for the ideas, tasks and reminders you'd otherwise forget. Leather-and-brass, offline-first, syncs to your own Firestore.
 
+## Round 3 — sync, icons, theming, gestures
+
+- **"Other devices still show nothing"**: the actual bug was that the service worker's cache version number never changed between updates. Browsers only re-check a service worker when its own file bytes change — since `sw.js` was untouched while `app.js` kept changing underneath it, every device stayed stuck running the *old* cached JavaScript indefinitely, no matter what got pushed. Fixed two ways: the cache version is bumped this round (forces every device to fetch fresh files once), and going forward, the app now auto-reloads itself the moment it detects a newer version has taken over — no more manual uninstall/reinstall needed after an update.
+- **Pull-to-refresh still firing**: `overscroll-behavior: contain` isn't reliably honored by every mobile browser for the native refresh gesture. Jot now intercepts the touch itself at the top of the page and calls `preventDefault()`, which reliably blocks it everywhere, and drives its own animation instead (see next point).
+- **Pull-to-reveal squircle**: pulling down at the top of the list now scales the header down slightly and rounds all four corners into a full squircle as you pull, then springs back with an iOS-style bounce on release — instead of the page just refreshing.
+- **Completed tab**: a new "Done" destination in the bottom nav shows everything you've checked off, with a small progress bar (`X of Y completed`). The old "Show archived" settings toggle was removed since this replaces it.
+- **Theme color**: Settings → Theme color now has 5 selectable accents (Periwinkle, Coral, Mint, Amber, Grape). Only the app's accent (header/FAB/links) changes — the four category colors (idea/task/note/reminder) stay fixed on purpose, so they're always recognizable regardless of theme.
+- **Icons**: every emoji has been replaced with Google's Material Symbols (Rounded) icon font — it's fetched the same way as the Poppins/Inter fonts already in use, and recolors/scales properly with the rest of the theme. Active bottom-nav icons switch to a filled variant, matching standard Material 3 navigation behavior.
+
 ## Fixing the installed app / redesign — what changed
 
 - **"Site might be temporarily down" when opened as an installed app** was a service worker bug: the old fetch handler could resolve with nothing (`undefined`) instead of a real response when a page wasn't cached yet, and browsers show that generic error screen when that happens. `sw.js` now always falls back to a cached copy of the app, so it never resolves empty.

@@ -18,14 +18,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,-25..0&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
 <div class="app" id="app">
 
-  <!-- Leather header -->
-  <header class="spine">
+  <!-- Header -->
+  <header class="spine" id="spine">
     <div class="spine-row">
       <div class="brand">
         <div class="brand-badge">A</div>
@@ -34,7 +35,9 @@
           <p class="brand-sub">Ajmal Ali A's idea vault</p>
         </div>
       </div>
-      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
+        <span class="material-symbols-rounded">settings</span>
+      </button>
     </div>
 
     <div class="status-strip">
@@ -45,31 +48,40 @@
   </header>
 
   <div id="installRibbon" class="install-ribbon" style="display:none;">
-    📌 Add Jot to your home screen for one-tap access
+    <span class="material-symbols-rounded">add_to_home_screen</span>
+    Add Jot to your home screen for one-tap access
     <button id="installBtn">Install</button>
-    <button class="dismiss" id="installDismiss">✕</button>
+    <button class="dismiss" id="installDismiss" aria-label="Dismiss">
+      <span class="material-symbols-rounded">close</span>
+    </button>
   </div>
 
   <!-- Search -->
   <div class="search-wrap">
     <div class="search-box">
-      <span>🔍</span>
+      <span class="material-symbols-rounded">search</span>
       <input type="text" id="searchInput" placeholder="Search your notebook…" />
     </div>
   </div>
 
   <!-- Pinned -->
   <div class="pinned-strip" id="pinnedStrip" style="display:none;">
-    <p class="pinned-label">📎 Pinned</p>
+    <p class="pinned-label"><span class="material-symbols-rounded">push_pin</span>Pinned</p>
     <div class="entries" id="pinnedEntries"></div>
+  </div>
+
+  <!-- Progress (Completed view only) -->
+  <div class="progress-wrap" id="progressWrap" style="display:none;">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <p class="progress-label" id="progressLabel">0 of 0 completed</p>
   </div>
 
   <!-- Entries -->
   <main class="entries" id="entries"></main>
 
   <div class="empty-state" id="emptyState" style="display:none;">
-    <div class="stamp">Nothing here yet</div>
-    <p>Tap the pen below to jot your first idea, task or note.</p>
+    <div class="stamp" id="emptyStamp">Nothing here yet</div>
+    <p id="emptyHint">Tap the pen below to jot your first idea, task or note.</p>
   </div>
 
   <!-- Stats -->
@@ -80,29 +92,35 @@
   </div>
 
   <!-- FAB -->
-  <button class="fab" id="fabAdd" aria-label="New entry">✎</button>
+  <button class="fab" id="fabAdd" aria-label="New entry">
+    <span class="material-symbols-rounded">edit</span>
+  </button>
 
   <!-- Bottom navigation: category filter -->
   <nav class="bottom-nav" id="bottomNav">
     <button class="tab active" data-cat="all">
-      <span class="nav-icon">🗂</span>
+      <span class="nav-icon"><span class="material-symbols-rounded">apps</span></span>
       <span class="nav-label">All</span>
     </button>
     <button class="tab" data-cat="idea">
-      <span class="nav-icon">💡</span>
-      <span class="nav-label">Ideas</span>
+      <span class="nav-icon"><span class="material-symbols-rounded">lightbulb</span></span>
+      <span class="nav-label">Idea</span>
     </button>
     <button class="tab" data-cat="task">
-      <span class="nav-icon">✅</span>
-      <span class="nav-label">Tasks</span>
+      <span class="nav-icon"><span class="material-symbols-rounded">task_alt</span></span>
+      <span class="nav-label">Task</span>
     </button>
     <button class="tab" data-cat="note">
-      <span class="nav-icon">📝</span>
-      <span class="nav-label">Notes</span>
+      <span class="nav-icon"><span class="material-symbols-rounded">edit_note</span></span>
+      <span class="nav-label">Note</span>
     </button>
     <button class="tab" data-cat="reminder">
-      <span class="nav-icon">⏰</span>
-      <span class="nav-label">Alerts</span>
+      <span class="nav-icon"><span class="material-symbols-rounded">alarm</span></span>
+      <span class="nav-label">Alert</span>
+    </button>
+    <button class="tab" data-cat="completed">
+      <span class="nav-icon"><span class="material-symbols-rounded">done_all</span></span>
+      <span class="nav-label">Done</span>
     </button>
   </nav>
 
@@ -116,7 +134,9 @@
     <input class="paper-input" id="entryTitle" placeholder="e.g. Build a PWA for random ideas…" required maxlength="140" />
 
     <div class="mic-row">
-      <button type="button" class="mic-btn" id="micBtn" title="Voice input">🎙</button>
+      <button type="button" class="mic-btn" id="micBtn" title="Voice input">
+        <span class="material-symbols-rounded">mic</span>
+      </button>
       <span class="mic-hint" id="micHint">Tap to dictate instead of typing</span>
     </div>
 
@@ -125,10 +145,10 @@
 
     <label class="field-label">Category</label>
     <div class="cat-picker" id="catPicker">
-      <button type="button" class="cat-pick selected" data-cat="idea">💡 Idea</button>
-      <button type="button" class="cat-pick" data-cat="task">✅ Task</button>
-      <button type="button" class="cat-pick" data-cat="note">📝 Note</button>
-      <button type="button" class="cat-pick" data-cat="reminder">⏰ Reminder</button>
+      <button type="button" class="cat-pick selected" data-cat="idea"><span class="material-symbols-rounded">lightbulb</span>Idea</button>
+      <button type="button" class="cat-pick" data-cat="task"><span class="material-symbols-rounded">task_alt</span>Task</button>
+      <button type="button" class="cat-pick" data-cat="note"><span class="material-symbols-rounded">edit_note</span>Note</button>
+      <button type="button" class="cat-pick" data-cat="reminder"><span class="material-symbols-rounded">alarm</span>Reminder</button>
     </div>
 
     <div class="row-2" style="margin-top:14px;">
@@ -147,7 +167,8 @@
 
     <div class="pin-toggle">
       <div class="switch" id="pinSwitch"><div class="knob"></div></div>
-      <span>Pin to top with a paperclip</span>
+      <span class="material-symbols-rounded" style="font-size:16px;">push_pin</span>
+      <span>Pin to top</span>
     </div>
 
     <div class="sheet-actions">
@@ -163,48 +184,70 @@
     <h2>Settings</h2>
 
     <div class="settings-row">
-      <div>
-        <div>Dark theme</div>
-        <div class="settings-meta">Easier on the eyes at night</div>
+      <div class="settings-label"><span class="material-symbols-rounded">dark_mode</span>
+        <div>
+          <div>Dark theme</div>
+          <div class="settings-meta">Easier on the eyes at night</div>
+        </div>
       </div>
       <div class="switch" id="darkSwitch"><div class="knob"></div></div>
     </div>
 
-    <div class="settings-row">
-      <div>
-        <div>Cross-device sync</div>
-        <div class="settings-meta" id="syncStatusMeta">Connecting…</div>
+    <div class="settings-row" style="flex-direction:column; align-items:stretch; gap:10px;">
+      <div class="settings-label"><span class="material-symbols-rounded">palette</span>
+        <div>
+          <div>Theme color</div>
+          <div class="settings-meta">Pick an accent that suits your mood</div>
+        </div>
+      </div>
+      <div class="palette-picker" id="palettePicker">
+        <button class="swatch selected" data-palette="periwinkle" style="--sw:#6C74D6;" aria-label="Periwinkle"></button>
+        <button class="swatch" data-palette="coral" style="--sw:#E38267;" aria-label="Coral"></button>
+        <button class="swatch" data-palette="mint" style="--sw:#3FAE82;" aria-label="Mint"></button>
+        <button class="swatch" data-palette="amber" style="--sw:#E3A24E;" aria-label="Amber"></button>
+        <button class="swatch" data-palette="grape" style="--sw:#9A6FD1;" aria-label="Grape"></button>
       </div>
     </div>
 
     <div class="settings-row">
-      <div>
-        <div>Reminder notifications</div>
-        <div class="settings-meta">Alerts while Jot is open</div>
+      <div class="settings-label"><span class="material-symbols-rounded">cloud_sync</span>
+        <div>
+          <div>Cross-device sync</div>
+          <div class="settings-meta" id="syncStatusMeta">Connecting…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-label"><span class="material-symbols-rounded">notifications</span>
+        <div>
+          <div>Reminder notifications</div>
+          <div class="settings-meta">Alerts while Jot is open</div>
+        </div>
       </div>
       <div class="switch" id="notifSwitch"><div class="knob"></div></div>
-    </div>
-
-    <div class="settings-row">
-      <div>
-        <div>Show archived / done</div>
-        <div class="settings-meta">Include completed items in lists</div>
-      </div>
-      <div class="switch" id="archiveSwitch"><div class="knob"></div></div>
     </div>
 
     <div class="settings-row" style="border-bottom:none; flex-direction:column; align-items:stretch; gap:8px; padding-top:16px;">
       <div class="settings-meta">Your data</div>
       <div class="sheet-actions" style="margin-top:0;">
-        <button class="btn btn-ghost" id="exportBtn" type="button">Export JSON</button>
-        <button class="btn btn-ghost" id="clearDoneBtn" type="button">Clear done</button>
+        <button class="btn btn-ghost" id="exportBtn" type="button">
+          <span class="material-symbols-rounded" style="font-size:16px; vertical-align:-3px;">download</span> Export JSON
+        </button>
+        <button class="btn btn-ghost" id="clearDoneBtn" type="button">
+          <span class="material-symbols-rounded" style="font-size:16px; vertical-align:-3px;">delete_sweep</span> Clear done
+        </button>
       </div>
     </div>
 
     <div class="settings-row" style="border-bottom:none; flex-direction:column; align-items:flex-start; gap:6px; padding-top:16px;">
       <div class="settings-meta">Made by Ajmal Ali A</div>
-      <a class="link-row" href="https://github.com/ajmaleee" target="_blank" rel="noopener">↗ github.com/ajmaleee</a>
-      <a class="link-row" href="https://www.instagram.com/ajmaleee__/" target="_blank" rel="noopener">↗ @ajmaleee__ on Instagram</a>
+      <a class="link-row" href="https://github.com/ajmaleee" target="_blank" rel="noopener">
+        <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px;">open_in_new</span> github.com/ajmaleee
+      </a>
+      <a class="link-row" href="https://www.instagram.com/ajmaleee__/" target="_blank" rel="noopener">
+        <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px;">open_in_new</span> @ajmaleee__ on Instagram
+      </a>
     </div>
 
     <div class="sheet-actions">

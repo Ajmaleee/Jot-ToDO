@@ -26,7 +26,7 @@ const savePrefs = (p) => localStorage.setItem(LS_PREFS, JSON.stringify(p));
 let state = {
   items: loadItems(),
   queue: loadQueue(),
-  prefs: Object.assign({ dark: false, notif: false, showArchived: false, lastOpenDate: null, streak: 0 }, loadPrefs()),
+  prefs: Object.assign({ dark: false, palette: "periwinkle", notif: false, lastOpenDate: null, streak: 0 }, loadPrefs()),
   activeCat: "all",
   search: "",
   online: navigator.onLine,
@@ -260,7 +260,7 @@ function toggleDone(id) {
 }
 
 // ---------- rendering ----------
-const catIcon = { idea: "💡", task: "✅", note: "📝", reminder: "⏰" };
+const catIcon = { idea: "lightbulb", task: "task_alt", note: "edit_note", reminder: "alarm" };
 
 function fmtDue(item) {
   if (!item.dueDate) return "";
@@ -275,23 +275,24 @@ function isOverdue(item) {
   const d = new Date(item.dueDate + "T" + (item.dueTime || "23:59"));
   return d.getTime() < Date.now();
 }
+const icon = (name, extra = "") => `<span class="material-symbols-rounded ${extra}">${name}</span>`;
 
 function cardHTML(item) {
   const tags = (item.tags || []).map((t) => `<span class="tag-chip">#${escapeHtml(t)}</span>`).join("");
   const due = item.dueDate
-    ? `<span class="due ${isOverdue(item) ? "overdue" : ""}">🗓 ${fmtDue(item)}</span>`
+    ? `<span class="due ${isOverdue(item) ? "overdue" : ""}">${icon("event", "meta-icon")}${fmtDue(item)}</span>`
     : "";
-  const pinFlag = item.pinned ? `<span class="pin-flag">📎</span>` : "";
-  const syncFlag = item.syncStatus === "pending" ? `<span class="sync-flag">✎ pending</span>` : "";
+  const pinFlag = item.pinned ? `<span class="pin-flag">${icon("push_pin")}</span>` : "";
+  const syncFlag = item.syncStatus === "pending" ? `<span class="sync-flag">${icon("sync", "meta-icon")}pending</span>` : "";
   return `
   <div class="entry-swipe" data-id="${item.id}">
     <div class="entry-actions">
-      <div class="done-bg">✓ ${item.done ? "Reopen" : "Done"}</div>
-      <div class="del-bg">Delete 🗑</div>
+      <div class="done-bg">${icon(item.done ? "restart_alt" : "check_circle")} ${item.done ? "Reopen" : "Done"}</div>
+      <div class="del-bg">Delete ${icon("delete")}</div>
     </div>
     <div class="card ${item.pinned ? "pinned" : ""} ${item.done ? "done" : ""}" data-id="${item.id}">
       <div class="card-top">
-        <span class="card-cat ${item.category}">${catIcon[item.category] || "📝"} ${item.category}</span>
+        <span class="card-cat ${item.category}">${icon(catIcon[item.category] || "edit_note")}${item.category}</span>
         ${pinFlag}
       </div>
       <p class="card-title">${escapeHtml(item.title)}</p>
@@ -307,8 +308,12 @@ function escapeHtml(s) {
 
 function visibleItems() {
   let items = state.items.slice();
-  if (!state.prefs.showArchived) items = items.filter((i) => !i.done);
-  if (state.activeCat !== "all") items = items.filter((i) => i.category === state.activeCat);
+  if (state.activeCat === "completed") {
+    items = items.filter((i) => i.done);
+  } else {
+    items = items.filter((i) => !i.done);
+    if (state.activeCat !== "all") items = items.filter((i) => i.category === state.activeCat);
+  }
   if (state.search.trim()) {
     const q = state.search.toLowerCase();
     items = items.filter(
@@ -324,13 +329,36 @@ function visibleItems() {
 
 function render() {
   const all = visibleItems();
-  const pinned = all.filter((i) => i.pinned);
-  const rest = all.filter((i) => !i.pinned);
+  const pinned = state.activeCat === "completed" ? [] : all.filter((i) => i.pinned);
+  const rest = state.activeCat === "completed" ? all : all.filter((i) => !i.pinned);
 
   $("#pinnedStrip").style.display = pinned.length ? "block" : "none";
   $("#pinnedEntries").innerHTML = pinned.map(cardHTML).join("");
   $("#entries").innerHTML = rest.map(cardHTML).join("");
   $("#emptyState").style.display = all.length === 0 ? "block" : "none";
+
+  if (all.length === 0) {
+    if (state.activeCat === "completed") {
+      $("#emptyStamp").textContent = "Nothing done yet";
+      $("#emptyHint").textContent = "Swipe an entry right to check it off and it'll show up here.";
+    } else {
+      $("#emptyStamp").textContent = "Nothing here yet";
+      $("#emptyHint").textContent = "Tap the pen below to jot your first idea, task or note.";
+    }
+  }
+
+  // progress view
+  const progressWrap = $("#progressWrap");
+  if (state.activeCat === "completed") {
+    const total = state.items.length;
+    const done = state.items.filter((i) => i.done).length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    progressWrap.style.display = "block";
+    $("#progressFill").style.width = pct + "%";
+    $("#progressLabel").textContent = `${done} of ${total} completed (${pct}%)`;
+  } else {
+    progressWrap.style.display = "none";
+  }
 
   bindCardGestures();
 
@@ -361,14 +389,16 @@ function bindCardGestures() {
 
     card.addEventListener("touchend", () => {
       dragging = false;
-      card.style.transition = "transform .25s ease";
       if (currentX > 90) {
+        card.style.transition = "transform .3s var(--ease-out)";
         card.style.transform = "translateX(120%)";
-        setTimeout(() => toggleDone(id), 150);
+        setTimeout(() => toggleDone(id), 180);
       } else if (currentX < -90) {
+        card.style.transition = "transform .3s var(--ease-out)";
         card.style.transform = "translateX(-120%)";
-        setTimeout(() => handleDeleteWithUndo(id), 150);
+        setTimeout(() => handleDeleteWithUndo(id), 180);
       } else {
+        card.style.transition = "transform .4s var(--ease-spring)";
         card.style.transform = "translateX(0)";
       }
       currentX = 0;
@@ -482,7 +512,7 @@ function wireEvents() {
     upsertItem(data);
     closeSheet("composerSheet");
     if (navigator.vibrate) navigator.vibrate(15);
-    showToast(state.editingId ? "Entry updated" : "Jotted down ✓");
+    showToast(state.editingId ? "Entry updated" : "Jotted down");
   });
 
   // tabs
@@ -516,12 +546,12 @@ function wireEvents() {
     $("#notifSwitch").classList.toggle("on", state.prefs.notif);
     savePrefs(state.prefs);
   });
-  $("#archiveSwitch").addEventListener("click", () => {
-    state.prefs.showArchived = !state.prefs.showArchived;
-    $("#archiveSwitch").classList.toggle("on", state.prefs.showArchived);
+  $$(".swatch").forEach((sw) => sw.addEventListener("click", () => {
+    state.prefs.palette = sw.dataset.palette;
+    applyTheme();
     savePrefs(state.prefs);
-    render();
-  });
+    if (navigator.vibrate) navigator.vibrate(8);
+  }));
 
   $("#syncNowBtn").addEventListener("click", () => flushQueue());
 
@@ -579,9 +609,10 @@ function wireEvents() {
 
 function applyTheme() {
   document.documentElement.setAttribute("data-theme", state.prefs.dark ? "dark" : "light");
+  document.documentElement.setAttribute("data-palette", state.prefs.palette || "periwinkle");
   $("#darkSwitch").classList.toggle("on", state.prefs.dark);
   $("#notifSwitch").classList.toggle("on", state.prefs.notif);
-  $("#archiveSwitch").classList.toggle("on", state.prefs.showArchived);
+  $$(".swatch").forEach((sw) => sw.classList.toggle("selected", sw.dataset.palette === (state.prefs.palette || "periwinkle")));
 }
 
 // ---------- streak tracking ----------
@@ -603,7 +634,7 @@ function startReminderWatcher() {
       if (item.category !== "reminder" || item.done || !item.dueDate || item.notified) return;
       const due = new Date(item.dueDate + "T" + (item.dueTime || "09:00")).getTime();
       if (due <= now && due > now - 5 * 60000) {
-        new Notification("⏰ " + item.title, { body: item.detail || "Reminder from Jot", icon: "icons/icon-192.png" });
+        new Notification(item.title, { body: item.detail || "Reminder from Jot", icon: "icons/icon-192.png" });
         item.notified = true;
         saveItems(state.items);
       }
@@ -611,7 +642,66 @@ function startReminderWatcher() {
   }, 30000);
 }
 
-// ---------- install prompt ----------
+// ---------- pull-to-reveal header (replaces native pull-to-refresh) ----------
+// overscroll-behavior in CSS isn't enough on every browser to stop the native
+// pull-to-refresh gesture, so we intercept the touch ourselves at the top of
+// the page, preventDefault it, and drive a custom squircle-reveal animation
+// on the header instead — the header eases into a full rounded "squircle"
+// and scales down slightly as you pull, then springs back on release.
+function setupPullReveal() {
+  const spine = document.getElementById("spine");
+  if (!spine) return;
+  const MAX_PULL = 90;
+  let startY = null;
+  let pulling = false;
+
+  const atTop = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+  const sheetOpen = () => document.querySelector(".sheet.open");
+
+  function apply(pull) {
+    const t = Math.min(pull / MAX_PULL, 1);
+    const scale = 1 - t * 0.045;
+    const radius = 24 + t * 16;
+    spine.style.transition = "none";
+    spine.style.transform = `scale(${scale}) translateY(${pull * 0.22}px)`;
+    spine.style.borderRadius = `${radius}px ${radius}px ${24 + t * 6}px ${24 + t * 6}px`;
+  }
+
+  function release(reachedMax) {
+    spine.style.transition = "transform .6s var(--ease-spring), border-radius .5s var(--ease-out)";
+    spine.style.transform = "";
+    spine.style.borderRadius = "";
+    if (reachedMax && navigator.vibrate) navigator.vibrate(6);
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    if (sheetOpen() || !atTop()) { pulling = false; return; }
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!pulling || startY === null) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0 || !atTop() || sheetOpen()) { pulling = false; release(false); return; }
+    e.preventDefault();
+    const pull = Math.min(dy * 0.45, MAX_PULL + 20);
+    apply(pull);
+  }, { passive: false });
+
+  document.addEventListener("touchend", () => {
+    if (pulling) release(false);
+    pulling = false;
+    startY = null;
+  });
+  document.addEventListener("touchcancel", () => {
+    if (pulling) release(false);
+    pulling = false;
+    startY = null;
+  });
+}
+
+
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
@@ -649,10 +739,20 @@ function boot() {
   updateSyncBadge();
   startReminderWatcher();
   handleShortcutParam();
+  setupPullReveal();
   initFirebase();
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch((err) => console.warn("SW registration failed", err));
+    // Every content update needs a new sw.js (cache version bump) to actually
+    // reach a device — once it does, this reloads automatically instead of
+    // requiring the old "close and reopen a few times" dance.
+    let hasReloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hasReloaded) return;
+      hasReloaded = true;
+      window.location.reload();
+    });
   }
 }
 
