@@ -22,5 +22,5 @@ export const firebaseConfig = {
 // your notebook. It doesn't need to be a real, checkable email address.
 export const syncAccount = {
   email: "ajmal@jot.local",
-  password: "change-this-password-before-deploying"
+  password: "boAt-rockerz-430"
 };
