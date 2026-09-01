@@ -7,16 +7,20 @@ A pocket notebook PWA for the ideas, tasks and reminders you'd otherwise forget.
 - **"Site might be temporarily down" when opened as an installed app** was a service worker bug: the old fetch handler could resolve with nothing (`undefined`) instead of a real response when a page wasn't cached yet, and browsers show that generic error screen when that happens. `sw.js` now always falls back to a cached copy of the app, so it never resolves empty.
 - **Because the fix lives inside the service worker itself, your phone needs to actually download the new one once.** After you redeploy: open the site in a normal browser tab (not the installed app) on the phone, let it load fully, then close it, and reopen the installed app. If it's still stuck, uninstall the home-screen app and reinstall it once — that guarantees the old broken worker is gone.
 - **Firestore sync bug**: writes were saving a local bookkeeping field (`syncStatus`) into your actual Firestore documents, so items could come back from the cloud looking permanently "pending" even after they'd synced. Fixed — that field now stays local-only. Sync also now retries automatically every 20 seconds in the background, not just when the browser fires an "online" event (which some networks never trigger cleanly).
-- **Redesign**: moved from the leather/paper look to **claymorphism + Material** — soft puffy "clay" surfaces (a light rim shadow + a soft dark shadow on opposite corners) built on Material's structure: a colored top app bar, filter chips, a Material-style FAB, elevated cards, and bottom sheets.
+- **"Other phones don't show my synced data"**: this was because anonymous sign-in creates a brand new, unrelated identity on every device — phone A and phone B were writing to two completely separate places in Firestore that never overlapped. Jot now signs every device into one fixed account (set in `js/firebase-config.js` as `syncAccount`), automatically, with no login screen. The first device to ever open the app creates that account; every device after that just logs into it — so opening Jot on any phone now pulls the same notebook. See step 1 below to set your own password before you deploy.
+- **Scroll/animation feel**: the earlier version disabled `overscroll-behavior` entirely to stop pull-to-refresh, which also killed iOS's native rubber-band bounce — that's what made hitting the top of the list feel like a wall. It's now set to `contain` instead of `none`, which keeps the bounce but still stops the page from triggering a refresh. Sheets, cards, chips, and the FAB now also use iOS-style easing curves (a smooth no-overshoot deceleration for sheets, a light spring for tap feedback) instead of generic linear/ease transitions.
+- **Bottom navigation**: the category filter (All / Ideas / Tasks / Notes / Alerts) moved from a scrolling row under the search bar to a fixed bottom tab bar, in line with standard mobile navigation patterns. The FAB now floats just above it.
+- **Redesign**: moved from the leather/paper look to **claymorphism + Material** — soft puffy "clay" surfaces (a light rim shadow + a soft dark shadow on opposite corners) built on Material's structure: a colored top app bar, a bottom navigation bar, a Material-style FAB, elevated cards, and bottom sheets.
 
 ## 1. Connect it to your Firebase project
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project** (free Spark plan is enough).
 2. In the project, open **Build → Firestore Database → Create database** (start in production mode).
-3. Open **Build → Authentication → Sign-in method** and enable **Anonymous**. That's what lets Jot save your data without you needing to log in.
+3. Open **Build → Authentication → Sign-in method** and enable **Email/Password** (not Anonymous — that's the one that was causing every device to get its own separate notebook). You do *not* need to enable Anonymous unless you want a same-device-only fallback while offline on first launch.
 4. Go to **Project settings → General → Your apps → Add app → Web (</>)**, register it, and copy the `firebaseConfig` object it gives you.
-5. Paste those values into `js/firebase-config.js` in this project, replacing the `PASTE_YOUR_…` placeholders.
-6. In **Firestore → Rules**, paste this so only your own device's anonymous identity can read/write your notebook:
+5. Paste those values into `js/firebase-config.js` in this project, replacing the `PASTE_YOUR_…` placeholders (already done for `jot-todo`).
+6. In the same file, set your own password in the `syncAccount` object — this is the one identity every device signs into automatically. It doesn't need to be a real inbox, just something only you know.
+7. In **Firestore → Rules**, paste this so only your sync account can read/write your notebook:
 
 ```
 rules_version = '2';

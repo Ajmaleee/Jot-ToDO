@@ -58,15 +58,6 @@
     </div>
   </div>
 
-  <!-- Category tabs -->
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-cat="all">All</button>
-    <button class="tab" data-cat="idea"><span class="dot"></span>Ideas</button>
-    <button class="tab" data-cat="task"><span class="dot"></span>Tasks</button>
-    <button class="tab" data-cat="note"><span class="dot"></span>Notes</button>
-    <button class="tab" data-cat="reminder"><span class="dot"></span>Reminders</button>
-  </nav>
-
   <!-- Pinned -->
   <div class="pinned-strip" id="pinnedStrip" style="display:none;">
     <p class="pinned-label">📎 Pinned</p>
@@ -90,6 +81,30 @@
 
   <!-- FAB -->
   <button class="fab" id="fabAdd" aria-label="New entry">✎</button>
+
+  <!-- Bottom navigation: category filter -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="tab active" data-cat="all">
+      <span class="nav-icon">🗂</span>
+      <span class="nav-label">All</span>
+    </button>
+    <button class="tab" data-cat="idea">
+      <span class="nav-icon">💡</span>
+      <span class="nav-label">Ideas</span>
+    </button>
+    <button class="tab" data-cat="task">
+      <span class="nav-icon">✅</span>
+      <span class="nav-label">Tasks</span>
+    </button>
+    <button class="tab" data-cat="note">
+      <span class="nav-icon">📝</span>
+      <span class="nav-label">Notes</span>
+    </button>
+    <button class="tab" data-cat="reminder">
+      <span class="nav-icon">⏰</span>
+      <span class="nav-label">Alerts</span>
+    </button>
+  </nav>
 
   <!-- Composer sheet -->
   <div class="sheet-backdrop" id="backdrop"></div>
@@ -153,6 +168,13 @@
         <div class="settings-meta">Easier on the eyes at night</div>
       </div>
       <div class="switch" id="darkSwitch"><div class="knob"></div></div>
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div>Cross-device sync</div>
+        <div class="settings-meta" id="syncStatusMeta">Connecting…</div>
+      </div>
     </div>
 
     <div class="settings-row">

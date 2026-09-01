@@ -40,6 +40,11 @@
   --font-display: 'Poppins', 'Inter', sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
+  /* iOS-like motion: a smooth, no-overshoot deceleration for panels/sheets,
+     and a light spring (slight overshoot) for tap feedback on small controls. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   color-scheme: light;
 }
 
@@ -61,13 +66,22 @@
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body{ margin:0; padding:0; height:100%; overscroll-behavior-y: none; }
-
+html{
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
 body{
+  margin:0; padding:0; min-height: 100%;
+  /* `contain` (not `none`) stops the pull-to-refresh gesture from chaining
+     to the browser, while still letting the page rubber-band/bounce at the
+     top and bottom like a native iOS scroll view — `none` was killing that
+     bounce entirely and made hitting the top feel like slamming into a wall. */
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
-  min-height: 100vh;
   transition: background-color .35s ease, color .35s ease;
 }
 
@@ -78,7 +92,7 @@ body{
   display: flex;
   flex-direction: column;
   position: relative;
-  padding-bottom: 100px;
+  padding-bottom: 190px;
 }
 
 .clay{
@@ -120,8 +134,10 @@ body{
   display: flex; align-items: center; justify-content: center;
   box-shadow: inset 1px 1px 2px rgba(255,255,255,.3), 0 2px 6px rgba(0,0,0,.15);
   font-size: 17px; cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .3s var(--ease-spring);
 }
-.icon-btn:active{ transform: scale(.92); }
+.icon-btn:active{ transform: scale(.9); transition-duration: .1s; }
 
 .status-strip{ margin-top: 16px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.85); font-weight: 500; }
 .status-dot{ width: 8px; height: 8px; border-radius: 50%; background: #7FE6BC; box-shadow: 0 0 0 4px rgba(127,230,188,.25); }
@@ -156,28 +172,49 @@ body{
 .search-box input{ border: none; outline: none; background: transparent; font-family: var(--font-body); font-size: 14.5px; color: var(--ink); flex: 1; }
 .search-box input::placeholder{ color: var(--ink-faint); }
 
-/* ---------- Category chips ---------- */
-.tabs{ display: flex; gap: 10px; padding: 16px 18px 8px; overflow-x: auto; scrollbar-width: none; }
-.tabs::-webkit-scrollbar{ display: none; }
-.tab{
-  flex: 0 0 auto; padding: 10px 16px; border-radius: var(--radius-round);
-  font-size: 12.5px; font-weight: 600; font-family: var(--font-body);
-  border: none; cursor: pointer; background: var(--surface); color: var(--ink-soft);
-  box-shadow: 5px 5px 10px var(--clay-dark), -5px -5px 10px var(--clay-light);
-  display: flex; align-items: center; gap: 7px; white-space: nowrap;
-  transition: box-shadow .15s ease;
+/* ---------- Bottom navigation: category filter ---------- */
+.bottom-nav{
+  position: fixed;
+  left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: var(--surface);
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -8px 20px var(--clay-dark), inset 0 1px 0 rgba(255,255,255,.5);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 6px calc(8px + env(safe-area-inset-bottom));
+  z-index: 41;
 }
-.tab .dot{ width: 7px; height: 7px; border-radius: 50%; }
-.tab[data-cat="idea"] .dot{ background: var(--idea); }
-.tab[data-cat="task"] .dot{ background: var(--task); }
-.tab[data-cat="note"] .dot{ background: var(--note); }
-.tab[data-cat="reminder"] .dot{ background: var(--reminder); }
-.tab.active{ color: #fff; box-shadow: inset 3px 3px 6px rgba(0,0,0,.18), inset -3px -3px 6px rgba(255,255,255,.12); }
-.tab.active[data-cat="idea"]{ background: var(--idea); }
-.tab.active[data-cat="task"]{ background: var(--task); }
-.tab.active[data-cat="note"]{ background: var(--note); }
-.tab.active[data-cat="reminder"]{ background: var(--reminder); }
-.tab.active[data-cat="all"]{ background: var(--primary); }
+.tab{
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: none; background: none; cursor: pointer;
+  padding: 4px 2px;
+  font-family: var(--font-body);
+  color: var(--ink-faint);
+  touch-action: manipulation;
+  transition: color .2s ease;
+}
+.tab .nav-icon{
+  width: 38px; height: 27px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-round);
+  font-size: 15.5px;
+  transition: background .25s var(--ease-out), transform .3s var(--ease-spring);
+}
+.tab .nav-label{ font-size: 10px; font-weight: 700; letter-spacing: .1px; }
+.tab:active .nav-icon{ transform: scale(.82); }
+.tab.active{ color: var(--ink); }
+.tab.active[data-cat="all"]{ color: var(--primary-deep); }
+.tab.active[data-cat="all"] .nav-icon{ background: var(--primary-wash); }
+.tab.active[data-cat="idea"]{ color: var(--idea); }
+.tab.active[data-cat="idea"] .nav-icon{ background: var(--idea-wash); }
+.tab.active[data-cat="task"]{ color: var(--task); }
+.tab.active[data-cat="task"] .nav-icon{ background: var(--task-wash); }
+.tab.active[data-cat="note"]{ color: var(--note); }
+.tab.active[data-cat="note"] .nav-icon{ background: var(--note-wash); }
+.tab.active[data-cat="reminder"]{ color: var(--reminder); }
+.tab.active[data-cat="reminder"] .nav-icon{ background: var(--reminder-wash); }
 
 /* ---------- Pinned ---------- */
 .pinned-strip{ padding: 8px 18px 0; }
@@ -199,10 +236,15 @@ body{
   position: relative; background: var(--surface); border-radius: var(--radius-lg);
   padding: 16px 18px 14px;
   box-shadow: 7px 7px 14px var(--clay-dark), -7px -7px 14px var(--clay-light);
-  transition: transform .18s ease, box-shadow .18s ease;
+  transition: transform .35s var(--ease-out), box-shadow .2s ease;
   touch-action: pan-y; cursor: pointer;
+  will-change: transform;
 }
-.card:active{ box-shadow: inset 4px 4px 8px var(--clay-dark), inset -4px -4px 8px var(--clay-light); }
+.card:active{
+  box-shadow: inset 4px 4px 8px var(--clay-dark), inset -4px -4px 8px var(--clay-light);
+  transform: scale(.985);
+  transition-duration: .12s;
+}
 .card.pinned{ box-shadow: 7px 7px 14px var(--clay-dark), -7px -7px 14px var(--clay-light), inset 0 0 0 2px var(--primary-wash); }
 .card.done{ opacity: .55; }
 .card.done .card-title{ text-decoration: line-through; text-decoration-color: var(--ink-faint); }
@@ -240,15 +282,17 @@ body{
 
 /* ---------- FAB ---------- */
 .fab{
-  position: fixed; right: 22px; bottom: calc(24px + env(safe-area-inset-bottom));
+  position: fixed; right: 22px; bottom: calc(92px + env(safe-area-inset-bottom));
   width: 62px; height: 62px; border-radius: var(--radius-lg); border: none;
   background: linear-gradient(160deg, #838AE0, var(--primary-deep));
   box-shadow: 6px 6px 16px rgba(78,85,176,.45), -4px -4px 10px rgba(255,255,255,.25), inset 1px 1px 3px rgba(255,255,255,.4);
   color: #fff; font-size: 26px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; z-index: 40; max-width: 480px;
+  touch-action: manipulation;
+  transition: transform .3s var(--ease-spring), box-shadow .2s ease;
 }
-.fab:active{ transform: scale(.93); box-shadow: inset 4px 4px 8px rgba(0,0,0,.25); }
+.fab:active{ transform: scale(.88); box-shadow: inset 4px 4px 8px rgba(0,0,0,.25); transition-duration: .1s; }
 
 /* ---------- Bottom sheets ---------- */
 .sheet-backdrop{
@@ -262,8 +306,11 @@ body{
   width: 100%; max-width: 480px; background: var(--bg);
   border-radius: 28px 28px 0 0; box-shadow: 0 -10px 30px rgba(30,32,60,.25);
   z-index: 51; padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
-  transition: transform .3s cubic-bezier(.32,.72,0,1);
+  transition: transform .45s var(--ease-out);
   max-height: 88vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  will-change: transform;
 }
 .sheet.open{ transform: translate(-50%, 0); }
 .sheet-handle{ width: 40px; height: 5px; background: var(--ink-faint); border-radius: var(--radius-round); margin: 8px auto 16px; opacity: .4; }
@@ -332,7 +379,7 @@ body{
 
 /* ---------- Toast ---------- */
 .toast{
-  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+  position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
   background: var(--ink); color: #fff; padding: 12px 18px; border-radius: var(--radius-md);
   font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 14px;
   opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 60;

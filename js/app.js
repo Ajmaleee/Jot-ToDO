@@ -1,4 +1,4 @@
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig, syncAccount } from "./firebase-config.js";
 
 /* ============================================================
    JOT — app logic
@@ -40,6 +40,8 @@ let state = {
 };
 
 // ---------- Firebase (optional — degrades gracefully if not configured) ----------
+let unsubscribeSnapshot = null;
+
 async function initFirebase() {
   if (firebaseConfig.apiKey.startsWith("PASTE_")) {
     console.warn("Jot: Firebase not configured yet — running in local-only mode. See README.md.");
@@ -48,7 +50,10 @@ async function initFirebase() {
   }
   try {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js");
-    const { getAuth, signInAnonymously, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js");
+    const {
+      getAuth, onAuthStateChanged, signInAnonymously,
+      signInWithEmailAndPassword, createUserWithEmailAndPassword
+    } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js");
     const { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
 
     const app = initializeApp(firebaseConfig);
@@ -57,18 +62,52 @@ async function initFirebase() {
     state._fs = { collection, doc, setDoc, deleteDoc, onSnapshot };
 
     onAuthStateChanged(state.auth, (user) => {
-      if (user) {
-        state.uid = user.uid;
-        localStorage.setItem(LS_UID, user.uid);
-        state.fsReady = true;
-        subscribeRemote();
-        flushQueue();
+      if (!user) return;
+      const uidChanged = state.uid && state.uid !== user.uid;
+      state.uid = user.uid;
+      localStorage.setItem(LS_UID, user.uid);
+      state.fsReady = true;
+
+      if (uidChanged) {
+        // Landed on a different account than before on this device (e.g. we'd
+        // fallen back to a local-only session earlier and just reconnected to
+        // the real shared one). Re-mark everything here as pending so it gets
+        // pushed up and MERGED into the shared notebook, never left behind.
+        state.items.forEach((it) => { it.syncStatus = "pending"; it.updatedAt = Date.now(); });
+        saveItems(state.items);
+        state.queue = state.items.map((it) => ({ type: "upsert", id: it.id, data: it, ts: Date.now() }));
+        saveQueue(state.queue);
       }
+
+      if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+      subscribeRemote();
+      flushQueue();
+      updateSyncAccountUI();
     });
-    await signInAnonymously(state.auth).catch((err) => {
-      console.warn("Jot: anonymous sign-in failed — enable it in Firebase Console → Authentication → Sign-in method.", err);
-      setStatus(false, "Sign-in not enabled");
-    });
+
+    // Every device signs into the SAME fixed account from firebase-config.js —
+    // that's what makes "open on any phone, see the same list" work with zero
+    // taps. The very first device ever to run this creates the account; every
+    // device after that just logs into it.
+    try {
+      await signInWithEmailAndPassword(state.auth, syncAccount.email, syncAccount.password);
+    } catch (err) {
+      if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential" || err.code === "auth/invalid-login-credentials") {
+        try {
+          await createUserWithEmailAndPassword(state.auth, syncAccount.email, syncAccount.password);
+        } catch (err2) {
+          console.warn("Jot: could not create the shared sync account, falling back to this-device-only.", err2);
+          await signInAnonymously(state.auth).catch(() => setStatus(false, "Sign-in not enabled"));
+        }
+      } else if (err.code === "auth/wrong-password") {
+        console.warn("Jot: syncAccount password in firebase-config.js doesn't match the account that already exists.");
+        setStatus(false, "Sync password mismatch");
+        await signInAnonymously(state.auth).catch(() => {});
+      } else {
+        console.warn("Jot: sync sign-in failed, falling back to this-device-only.", err);
+        await signInAnonymously(state.auth).catch(() => setStatus(false, "Sign-in not enabled"));
+      }
+    }
 
     // Belt-and-braces retry: the 'online' browser event can be missed (e.g. a flaky
     // connection that never fires it, or Firestore's own token needing a refresh),
@@ -78,6 +117,15 @@ async function initFirebase() {
     console.warn("Jot: Firebase init failed, staying local-only.", err);
     setStatus(false, "Local only");
   }
+}
+
+function updateSyncAccountUI() {
+  const meta = document.getElementById("syncStatusMeta");
+  if (!meta) return;
+  const user = state.auth && state.auth.currentUser;
+  meta.textContent = user && !user.isAnonymous
+    ? "Synced automatically across every device you open this on"
+    : "This device only — sync account couldn't connect (see console)";
 }
 
 function itemsCollectionRef() {
