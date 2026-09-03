@@ -4,7 +4,7 @@
 // installed (standalone) app — that happens whenever respondWith() resolves to
 // undefined, which the old v1 handler could do when a URL wasn't in the cache yet
 // and the network request also failed.
-const CACHE_NAME = "jot-shell-v3";
+const CACHE_NAME = "jot-shell-v4";
 const SHELL_ASSETS = [
   "./",
   "./index.html",

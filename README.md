@@ -2,6 +2,13 @@
 
 A pocket notebook PWA for the ideas, tasks and reminders you'd otherwise forget. Leather-and-brass, offline-first, syncs to your own Firestore.
 
+## Round 4 — bounce everywhere, swipe resistance
+
+- **Bigger bounce on the pull-reveal**: the header now scales down and rounds out further before you hit max pull, and springs back with a much stronger, longer overshoot on release (a new `--ease-bounce` curve, more dramatic than the one buttons use).
+- **Every tappable element now reacts**: buttons, chips, switches, the FAB, toggle knobs, toast actions — all now scale down instantly on press and spring back on release, instead of sitting rigid until an action completes. This is the general iOS pattern: quick press-in, bouncy release.
+- **Swipe resistance fixed**: the real bug was that swipe-to-complete/delete moved the card on *any* horizontal finger drift, including the natural side-to-side wobble that happens while scrolling down a list — so slow scrolling could look like it was about to trigger a swipe. Cards now lock onto whichever direction (vertical scroll vs horizontal swipe) the finger actually commits to first, and once locked horizontal, the card visibly lags behind the finger (resistance) rather than moving 1:1, so triggering done/delete now takes a deliberate, longer drag.
+- Remember: any code change needs a bumped cache version in `sw.js` to actually reach your phones (see the Round 3 note above) — already done for this round.
+
 ## Round 3 — sync, icons, theming, gestures
 
 - **"Other devices still show nothing"**: the actual bug was that the service worker's cache version number never changed between updates. Browsers only re-check a service worker when its own file bytes change — since `sw.js` was untouched while `app.js` kept changing underneath it, every device stayed stuck running the *old* cached JavaScript indefinitely, no matter what got pushed. Fixed two ways: the cache version is bumped this round (forces every device to fetch fresh files once), and going forward, the app now auto-reloads itself the moment it detects a newer version has taken over — no more manual uninstall/reinstall needed after an update.

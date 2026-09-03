@@ -373,35 +373,71 @@ function bindCardGestures() {
   $$(".entry-swipe").forEach((wrap) => {
     const card = wrap.querySelector(".card");
     const id = wrap.dataset.id;
-    let startX = 0, currentX = 0, dragging = false;
+    let startX = 0, startY = 0, currentX = 0, dragging = false, axis = null;
+    const LOCK_THRESHOLD = 10; // px of movement before we commit to horizontal vs vertical
+    const RESIST = 0.55;        // how much the card lags behind the finger — the "resistance"
+    const MAX_DRAG = 130;       // visual clamp, however far you actually drag
+    const TRIGGER = 88;         // damped px needed to commit to done/delete
+
+    const resist = (dx) => {
+      const damped = dx * RESIST;
+      return Math.sign(damped) * Math.min(Math.abs(damped), MAX_DRAG);
+    };
 
     card.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
       dragging = true;
+      axis = null;
       card.style.transition = "none";
     }, { passive: true });
 
     card.addEventListener("touchmove", (e) => {
       if (!dragging) return;
-      currentX = e.touches[0].clientX - startX;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+
+      if (axis === null) {
+        if (Math.abs(dx) > LOCK_THRESHOLD || Math.abs(dy) > LOCK_THRESHOLD) {
+          // Whichever direction moved further wins — this is what stops a
+          // slightly-diagonal scrolling finger from also nudging the card
+          // sideways and looking like an accidental swipe.
+          axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        } else {
+          return; // inside the dead zone — don't commit to anything yet
+        }
+      }
+
+      if (axis === "y") return; // vertical scroll in progress — leave the card alone entirely
+
+      e.preventDefault(); // we've committed to a horizontal swipe; stop the page fighting it
+      currentX = resist(dx);
       card.style.transform = `translateX(${currentX}px)`;
-    }, { passive: true });
+    }, { passive: false });
 
     card.addEventListener("touchend", () => {
       dragging = false;
-      if (currentX > 90) {
-        card.style.transition = "transform .3s var(--ease-out)";
-        card.style.transform = "translateX(120%)";
-        setTimeout(() => toggleDone(id), 180);
-      } else if (currentX < -90) {
-        card.style.transition = "transform .3s var(--ease-out)";
-        card.style.transform = "translateX(-120%)";
-        setTimeout(() => handleDeleteWithUndo(id), 180);
-      } else {
-        card.style.transition = "transform .4s var(--ease-spring)";
-        card.style.transform = "translateX(0)";
+      if (axis === "x") {
+        if (currentX > TRIGGER) {
+          card.style.transition = "transform .3s var(--ease-out)";
+          card.style.transform = "translateX(120%)";
+          setTimeout(() => toggleDone(id), 180);
+        } else if (currentX < -TRIGGER) {
+          card.style.transition = "transform .3s var(--ease-out)";
+          card.style.transform = "translateX(-120%)";
+          setTimeout(() => handleDeleteWithUndo(id), 180);
+        } else {
+          card.style.transition = "transform .5s var(--ease-bounce)";
+          card.style.transform = "translateX(0)";
+        }
       }
       currentX = 0;
+      axis = null;
+    });
+    card.addEventListener("touchcancel", () => {
+      dragging = false; axis = null; currentX = 0;
+      card.style.transition = "transform .5s var(--ease-bounce)";
+      card.style.transform = "translateX(0)";
     });
 
     card.addEventListener("click", () => openEditor(id));
@@ -654,24 +690,27 @@ function setupPullReveal() {
   const MAX_PULL = 90;
   let startY = null;
   let pulling = false;
+  let reachedMax = false;
 
   const atTop = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
   const sheetOpen = () => document.querySelector(".sheet.open");
 
   function apply(pull) {
     const t = Math.min(pull / MAX_PULL, 1);
-    const scale = 1 - t * 0.045;
-    const radius = 24 + t * 16;
+    const scale = 1 - t * 0.07;
+    const radius = 24 + t * 20;
     spine.style.transition = "none";
-    spine.style.transform = `scale(${scale}) translateY(${pull * 0.22}px)`;
-    spine.style.borderRadius = `${radius}px ${radius}px ${24 + t * 6}px ${24 + t * 6}px`;
+    spine.style.transform = `scale(${scale}) translateY(${pull * 0.3}px)`;
+    spine.style.borderRadius = `${radius}px ${radius}px ${24 + t * 8}px ${24 + t * 8}px`;
+    if (t >= 1 && !reachedMax) { reachedMax = true; if (navigator.vibrate) navigator.vibrate(6); }
+    if (t < 1) reachedMax = false;
   }
 
-  function release(reachedMax) {
-    spine.style.transition = "transform .6s var(--ease-spring), border-radius .5s var(--ease-out)";
+  function release() {
+    spine.style.transition = "transform .7s var(--ease-bounce), border-radius .6s var(--ease-bounce)";
     spine.style.transform = "";
     spine.style.borderRadius = "";
-    if (reachedMax && navigator.vibrate) navigator.vibrate(6);
+    reachedMax = false;
   }
 
   document.addEventListener("touchstart", (e) => {
@@ -683,19 +722,19 @@ function setupPullReveal() {
   document.addEventListener("touchmove", (e) => {
     if (!pulling || startY === null) return;
     const dy = e.touches[0].clientY - startY;
-    if (dy <= 0 || !atTop() || sheetOpen()) { pulling = false; release(false); return; }
+    if (dy <= 0 || !atTop() || sheetOpen()) { pulling = false; release(); return; }
     e.preventDefault();
-    const pull = Math.min(dy * 0.45, MAX_PULL + 20);
+    const pull = Math.min(dy * 0.5, MAX_PULL + 30);
     apply(pull);
   }, { passive: false });
 
   document.addEventListener("touchend", () => {
-    if (pulling) release(false);
+    if (pulling) release();
     pulling = false;
     startY = null;
   });
   document.addEventListener("touchcancel", () => {
-    if (pulling) release(false);
+    if (pulling) release();
     pulling = false;
     startY = null;
   });
